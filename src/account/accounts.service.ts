@@ -7,6 +7,7 @@ import { EventStoreService } from '../event-store/event-store.service.js';
 import { AccountEvent, evolve, initialState } from './account.js';
 import { AppendStreamState, NO_STREAM } from '@kurrent/kurrentdb-client';
 import { randomUUIDv7 } from 'crypto';
+import { metadata } from 'reflect-metadata/no-conflict';
 
 const stream = (id: string) => `account-${id}`;
 
@@ -59,6 +60,20 @@ export class AccountService {
       revision,
       actorId,
     );
+  }
+
+  async history(id: string) {
+    const entries = [];
+    for await (const e of this.eventStore.read(stream(id))) {
+      entries.push({
+        revision: Number(e.revision),
+        type: e.type,
+        data: e.data,
+        metadata: e.metadata,
+        at: e.created,
+      });
+    }
+    return entries;
   }
 
   private async append(
